@@ -28,7 +28,6 @@ class User(db.Model):
     access_token = db.Column(db.String(256))
     refresh_token = db.Column(db.String(256))
 
-# Create the database tables if they do not exist.
 with app.app_context():
     db.create_all()
 
@@ -68,11 +67,10 @@ def refresh_access_token(user):
 def callback():
     code = request.args.get('code')
     
-    # If no code is present (user refreshed the page), redirect to login
+    # Redirect to login if code is missing (e.g., page refresh)
     if not code:
         return redirect(url_for('login'))
 
-    # Exchange the code for tokens.
     data = {
         'grant_type': 'authorization_code',
         'code': code,
@@ -85,7 +83,7 @@ def callback():
     try:
         token_data = token_response.json()
     except ValueError:
-        return redirect(url_for('login'))  # Redirect to login on error
+        return redirect(url_for('login'))
 
     if 'error' in token_data:
         return redirect(url_for('login'))
@@ -93,26 +91,19 @@ def callback():
     access_token = token_data.get('access_token')
     refresh_token = token_data.get('refresh_token')
 
-    if not access_token or not refresh_token:
-        return redirect(url_for('login'))
-
-    # Retrieve the Spotify user profile.
     headers = {'Authorization': f'Bearer {access_token}', 'Content-Type': 'application/json'}
     profile_response = requests.get("https://api.spotify.com/v1/me", headers=headers)
 
     if profile_response.status_code != 200:
         return redirect(url_for('login'))
 
-    try:
-        user_info = profile_response.json()
-    except ValueError:
-        return redirect(url_for('login'))
-
+    user_info = profile_response.json()
     spotify_user_id = user_info.get('id')
+
     if not spotify_user_id:
         return redirect(url_for('login'))
 
-    # Check if user exists or create a new one
+    # Create or update user record.
     user = User.query.filter_by(spotify_user_id=spotify_user_id).first()
     if user:
         user.access_token = access_token
@@ -130,18 +121,6 @@ def callback():
         db.session.commit()
 
     return render_template('profile.html', user_key=user.user_key)
-
-@app.route('/profile')
-def profile():
-    user_key = request.args.get('user_key')
-    if not user_key:
-        return "No user key provided."
-    
-    user = User.query.filter_by(user_key=user_key).first()
-    if not user:
-        return "User not found. Please login."
-    
-    return f"Hello! Your Widget Key: {user.user_key}"
 
 @app.route('/currently-playing')
 def currently_playing():
