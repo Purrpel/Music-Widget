@@ -16,6 +16,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:/
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
+
 # Spotify API credentials
 SPOTIFY_CLIENT_ID = 'f5dd28f91f6f44048eee06f0903f308c'
 SPOTIFY_CLIENT_SECRET = 'd65b54fc514f453d8e6617768ab02471'
@@ -29,7 +30,7 @@ class User(db.Model):
     access_token = db.Column(db.String(256))
     refresh_token = db.Column(db.String(256))
 
-# Create the database tables if they don't exist.
+# Create the database tables if they do not exist.
 with app.app_context():
     db.create_all()
 
@@ -46,7 +47,7 @@ def login():
     return redirect(auth_url)
 
 def refresh_access_token(user):
-    """Refresh the access token for a given user (User model instance) and update the DB."""
+    """Refresh the access token for a given user and update the database."""
     data = {
         'grant_type': 'refresh_token',
         'refresh_token': user.refresh_token,
