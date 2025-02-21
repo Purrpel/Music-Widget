@@ -19,7 +19,7 @@ db = SQLAlchemy(app)
 # Spotify API credentials
 SPOTIFY_CLIENT_ID = 'f5dd28f91f6f44048eee06f0903f308c'
 SPOTIFY_CLIENT_SECRET = 'd65b54fc514f453d8e6617768ab02471'
-SPOTIFY_REDIRECT_URI = 'https://music-widget.onrender.com/callback'
+SPOTIFY_REDIRECT_URI = 'https://music-widget1.onrender.com/callback'
 
 # Define the User model.
 class User(db.Model):
