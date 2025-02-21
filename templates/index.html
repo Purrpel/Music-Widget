@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Home{% endblock %}
 {% block content %}
-  <div class="centered-container">
-    <!-- Big Spotify login button -->
-    <a href="{{ url_for('login') }}" class="login-button">Login with Spotify</a>
+  <div class="centered">
+    <h1>Welcome to the Spotify App</h1>
+    <a href="{{ url_for('login') }}" class="btn primary">Login with Spotify</a>
   </div>
 {% endblock %}

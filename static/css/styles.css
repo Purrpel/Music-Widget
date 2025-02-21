@@ -1,97 +1,74 @@
-/* General styling */
-body, html {
+/* Global Reset */
+* {
   margin: 0;
   padding: 0;
-  background-color: #000;
+  box-sizing: border-box;
+}
+
+body, html {
+  height: 100%;
+  font-family: 'Roboto', sans-serif;
+}
+
+/* Background */
+body {
+  background: linear-gradient(135deg, #1e1e1e, #343434);
   color: #fff;
-  font-family: 'Helvetica Neue', sans-serif;
-  height: 100%;
-  overflow: hidden;
 }
 
-/* Background and floating shapes */
-.background {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-}
-
-.floating-shape {
-  position: absolute;
-  animation: float 10s ease-in-out infinite;
-}
-
-@keyframes float {
-  0% { transform: translate(0, 0); opacity: 0.5; }
-  50% { transform: translate(20px, -20px); opacity: 1; }
-  100% { transform: translate(0, 0); opacity: 0.5; }
-}
-
-/* Content container */
-.content {
-  position: relative;
-  z-index: 10;
+/* Container */
+.container {
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   height: 100%;
 }
 
-/* Centered container for text and buttons */
-.centered-container {
+/* Centered content */
+.centered {
   text-align: center;
+  padding: 20px;
 }
 
-/* Spotify Login Button */
-.login-button {
+/* Headings */
+h1 {
+  margin-bottom: 20px;
+  font-size: 2.5rem;
+}
+
+/* Paragraphs */
+p {
+  font-size: 1.2rem;
+  margin-bottom: 20px;
+}
+
+/* Buttons */
+.btn {
+  display: inline-block;
+  text-decoration: none;
+  padding: 12px 24px;
+  margin: 10px;
+  border-radius: 30px;
+  transition: background-color 0.3s ease, transform 0.3s ease;
+  font-weight: 700;
+}
+
+.btn.primary {
   background-color: #1DB954;
   color: #fff;
-  padding: 20px 40px;
-  font-size: 24px;
-  border: none;
-  border-radius: 50px;
-  text-decoration: none;
-  transition: background-color 0.3s, transform 0.3s;
 }
 
-.login-button:hover {
-  background-color: #1ed760;
+.btn.primary:hover {
+  background-color: #17a44d;
   transform: scale(1.05);
 }
 
-/* Copy Button */
-.copy-button {
-  background-color: #333;
-  color: #fff;
-  padding: 10px 20px;
-  font-size: 18px;
-  border: none;
-  border-radius: 25px;
-  cursor: pointer;
-  transition: background-color 0.3s, transform 0.3s;
-}
-
-.copy-button:hover {
-  background-color: #555;
-  transform: scale(1.05);
-}
-
-/* Home Button */
-.home-button {
+.btn.secondary {
   background-color: #555;
   color: #fff;
-  padding: 10px 20px;
-  font-size: 18px;
-  border: none;
-  border-radius: 25px;
-  text-decoration: none;
-  transition: background-color 0.3s, transform 0.3s;
 }
 
-.home-button:hover {
+.btn.secondary:hover {
   background-color: #777;
   transform: scale(1.05);
 }
