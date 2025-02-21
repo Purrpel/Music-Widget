@@ -11,11 +11,9 @@ CORS(app, supports_credentials=True)
 app.secret_key = os.urandom(24)
 
 # Configure SQLAlchemy to use PostgreSQL via Render's DATABASE_URL.
-# For local testing, it falls back to SQLite.
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///database.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
-
 
 # Spotify API credentials
 SPOTIFY_CLIENT_ID = 'f5dd28f91f6f44048eee06f0903f308c'
@@ -69,9 +67,11 @@ def refresh_access_token(user):
 @app.route('/callback')
 def callback():
     code = request.args.get('code')
-    if not code:
-        return "Error: Missing code in callback"
     
+    # If no code is present (user refreshed the page), redirect to login
+    if not code:
+        return redirect(url_for('login'))
+
     # Exchange the code for tokens.
     data = {
         'grant_type': 'authorization_code',
@@ -81,74 +81,58 @@ def callback():
         'client_secret': SPOTIFY_CLIENT_SECRET,
     }
     token_response = requests.post('https://accounts.spotify.com/api/token', data=data)
+    
     try:
         token_data = token_response.json()
     except ValueError:
-        return f"Error decoding token response: {token_response.text}", 500
+        return redirect(url_for('login'))  # Redirect to login on error
 
     if 'error' in token_data:
-        return f"Error exchanging code: {token_data}. Please <a href='/login'>login</a> again."
-    
+        return redirect(url_for('login'))
+
     access_token = token_data.get('access_token')
     refresh_token = token_data.get('refresh_token')
-    
+
     if not access_token or not refresh_token:
-        return f"Error: {token_data}. Please <a href='/login'>login</a> again."
-    
+        return redirect(url_for('login'))
+
     # Retrieve the Spotify user profile.
-    headers = {
-        'Authorization': f'Bearer {access_token}',
-        'Content-Type': 'application/json'
-    }
+    headers = {'Authorization': f'Bearer {access_token}', 'Content-Type': 'application/json'}
     profile_response = requests.get("https://api.spotify.com/v1/me", headers=headers)
+
     if profile_response.status_code != 200:
-        try:
-            error_details = profile_response.json()
-        except ValueError:
-            error_details = profile_response.text or "No details provided."
-        return f"Error fetching profile: {error_details}", 500
+        return redirect(url_for('login'))
+
     try:
         user_info = profile_response.json()
     except ValueError:
-        return f"Error parsing profile response: {profile_response.text}", 500
+        return redirect(url_for('login'))
 
     spotify_user_id = user_info.get('id')
     if not spotify_user_id:
-        return "Error: Could not retrieve Spotify user ID."
-    
-    # Check if this Spotify user already exists.
+        return redirect(url_for('login'))
+
+    # Check if user exists or create a new one
     user = User.query.filter_by(spotify_user_id=spotify_user_id).first()
     if user:
-        try:
-            # Update tokens but keep the existing widget key.
-            user.access_token = access_token
-            user.refresh_token = refresh_token
-            db.session.commit()
-        except IntegrityError as e:
-            db.session.rollback()
-            return f"Database error updating user: {str(e)}", 500
+        user.access_token = access_token
+        user.refresh_token = refresh_token
+        db.session.commit()
     else:
-        try:
-            # Create a new user with a unique widget key.
-            user_key = str(uuid.uuid4())
-            user = User(
-                spotify_user_id=spotify_user_id,
-                user_key=user_key,
-                access_token=access_token,
-                refresh_token=refresh_token
-            )
-            db.session.add(user)
-            db.session.commit()
-        except IntegrityError as e:
-            db.session.rollback()
-            return f"Database error creating user: {str(e)}", 500
+        user_key = str(uuid.uuid4())
+        user = User(
+            spotify_user_id=spotify_user_id,
+            user_key=user_key,
+            access_token=access_token,
+            refresh_token=refresh_token
+        )
+        db.session.add(user)
+        db.session.commit()
 
-    # Render the profile page with the widget key.
     return render_template('profile.html', user_key=user.user_key)
 
 @app.route('/profile')
 def profile():
-    # For debugging: retrieve user info based on a provided user_key.
     user_key = request.args.get('user_key')
     if not user_key:
         return "No user key provided."
@@ -157,33 +141,10 @@ def profile():
     if not user:
         return "User not found. Please login."
     
-    headers = {
-        'Authorization': f'Bearer {user.access_token}',
-        'Content-Type': 'application/json'
-    }
-    response = requests.get("https://api.spotify.com/v1/me", headers=headers)
-    if response.status_code != 200:
-        new_token = refresh_access_token(user)
-        if new_token:
-            headers['Authorization'] = f'Bearer {new_token}'
-            response = requests.get("https://api.spotify.com/v1/me", headers=headers)
-    
-    if response.status_code != 200:
-        try:
-            error_details = response.json()
-        except ValueError:
-            error_details = response.text or "No details provided."
-        return f"Error: Unable to fetch user profile from Spotify - {error_details}", 500
-    try:
-        user_info = response.json()
-    except ValueError:
-        return f"Error parsing profile response: {response.text}", 500
-    
-    return f"Hello, {user_info.get('display_name', 'User')}! Your Widget Key: {user.user_key}"
+    return f"Hello! Your Widget Key: {user.user_key}"
 
 @app.route('/currently-playing')
 def currently_playing():
-    # The widget should pass the unique user key as a query parameter 'userKey'
     user_key = request.args.get('userKey')
     if not user_key:
         return jsonify({"error": "Missing userKey"}), 400
@@ -192,18 +153,15 @@ def currently_playing():
     if not user:
         return jsonify({"error": "Invalid userKey"}), 400
     
-    headers = {
-        'Authorization': f'Bearer {user.access_token}',
-        'Content-Type': 'application/json'
-    }
+    headers = {'Authorization': f'Bearer {user.access_token}', 'Content-Type': 'application/json'}
     response = requests.get("https://api.spotify.com/v1/me/player/currently-playing", headers=headers)
-    
+
     if response.status_code == 401:
         new_token = refresh_access_token(user)
         if new_token:
             headers['Authorization'] = f'Bearer {new_token}'
             response = requests.get("https://api.spotify.com/v1/me/player/currently-playing", headers=headers)
-    
+
     if response.status_code == 204:
         return jsonify({
             "track": "",
@@ -214,20 +172,9 @@ def currently_playing():
             "duration_ms": 0
         }), 200
     elif response.status_code != 200:
-        try:
-            error_details = response.json()
-        except ValueError:
-            error_details = response.text or "No details provided."
-        return jsonify({
-            "error": "Failed to fetch currently playing",
-            "details": error_details
-        }), response.status_code
+        return jsonify({"error": "Failed to fetch currently playing"}), response.status_code
 
-    try:
-        data = response.json()
-    except ValueError:
-        return jsonify({"error": "Error parsing currently playing response", "details": response.text}), 500
-
+    data = response.json()
     if data and data.get('item'):
         track_name = data['item'].get('name', 'Unknown Title')
         artists = ", ".join([artist['name'] for artist in data['item'].get('artists', [])])
@@ -244,7 +191,7 @@ def currently_playing():
             "progress_ms": progress_ms,
             "duration_ms": duration_ms
         })
-    
+
     return jsonify({
         "track": "",
         "artists": "",
