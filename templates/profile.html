@@ -3,8 +3,8 @@
 {% block content %}
   <div class="centered">
     <h1>Login Successful!</h1>
-    <p>Your widget key is: <span id="user-key">{{ user_key }}</span></p>
-    <button id="copy-button" class="btn secondary">Copy Key</button>
+    <p>Your Widget Key: <span id="user-key">{{ user_key }}</span></p>
+<button id="copy-button">Copy Key</button>
     <br>
     <a href="{{ url_for('home') }}" class="btn">Back Home</a>
   </div>
