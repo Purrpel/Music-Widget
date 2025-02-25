@@ -1,6 +1,8 @@
 import os
 import uuid
 import requests
+import threading
+import time
 from flask import Flask, redirect, url_for, request, jsonify, render_template
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
@@ -180,5 +182,26 @@ def currently_playing():
         "duration_ms": 0
     }), 200
 
+def keep_alive():
+    """
+    Periodically ping the app to keep it active.
+    This function sends a GET request to the home page once every hour.
+    """
+    while True:
+        try:
+            # Replace the URL below with your actual Render URL if different.
+            requests.get("https://music-widget1.onrender.com")
+            print("Pinged self to keep alive.")
+        except Exception as e:
+            print("Keep-alive ping failed:", e)
+        # Wait for one hour (3600 seconds) before the next ping.
+        time.sleep(3600)
+
 if __name__ == '__main__':
+    # Start the keep-alive thread as a daemon.
+    ping_thread = threading.Thread(target=keep_alive)
+    ping_thread.daemon = True
+    ping_thread.start()
+
+    # Start the Flask app.
     app.run(port=3000, debug=True)
